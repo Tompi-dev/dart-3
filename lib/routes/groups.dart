@@ -55,6 +55,7 @@ class GroupsRoute {
       }
     });
 
+
   // ===== POST /groups =====
 router.post('/groups', (Request req) async {
   final authHeader = req.headers['Authorization'];
@@ -63,6 +64,7 @@ router.post('/groups', (Request req) async {
       jsonEncode({'error': 'Missing or invalid Authorization header'}),
       headers: {'content-type': 'application/json'},
     );
+    
   }
 
   final token = authHeader.substring(7).trim();
@@ -74,7 +76,7 @@ router.post('/groups', (Request req) async {
     );
   }
 
-  // 🔒 Проверка роли
+ 
   final role = authData['role'];
   if (role != 'teacher' && role != 'admin') {
     return Response.forbidden(

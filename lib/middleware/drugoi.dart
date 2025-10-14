@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
-const _secretKey = 'super_secret_key_123';
+import '../env.dart';
+final _secretKey = Env.require("JWT_SECRET"); 
 
 
 Middleware jwtAuthorization() {

@@ -1,8 +1,8 @@
 
 import 'dart:convert';
 import 'package:jaguar_jwt/jaguar_jwt.dart';
-
-const _jwtSecret = 'super_secret_key_123'; 
+import '../env.dart';
+final _jwtSecret = Env.require("JWT_SECRET"); 
 
 
 Map<String, dynamic>? verifyJwt(String token) {
