@@ -8,6 +8,7 @@ It supports:
 - Group creation and student enrollment (normal and trial)
 - Time conflict validation and data logging
 
+BTW drugoi.dart - is middleware for jwt tokenization
 ---
 
 ## 🧩 Tech Stack
@@ -44,51 +45,63 @@ dart pub get
 ##  2. Database Setup (PostgreSQL)
 Create Database
 sql
-Копировать код
-CREATE DATABASE nomad_project;
-\c nomad_project;
-Create Tables
-sql
-Копировать код
+
+-- USERS
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
-  name TEXT,
-  email TEXT UNIQUE,
-  password TEXT,
-  role TEXT CHECK (role IN ('student','teacher','admin'))
+  name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('student', 'teacher', 'admin')),
+  contact_info TEXT
 );
 
+-- TEACHERS
 CREATE TABLE teachers (
-  id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id)
+  id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  work_hours JSONB DEFAULT '{}'::jsonb,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'sick', 'leave'))
 );
 
+-- STUDENTS
 CREATE TABLE students (
-  id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id)
-);
-
-CREATE TABLE halls (
-  id SERIAL PRIMARY KEY,
-  name TEXT
-);
-
-CREATE TABLE groups (
-  id SERIAL PRIMARY KEY,
-  name TEXT,
-  teacher_id INT REFERENCES teachers(id),
-  hall_id INT REFERENCES halls(id),
-  start_time TIMESTAMP,
-  end_time TIMESTAMP
-);
-
-CREATE TABLE group_students (
-  id SERIAL PRIMARY KEY,
-  group_id INT REFERENCES groups(id),
-  student_id INT REFERENCES students(id),
+  id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   is_trial BOOLEAN DEFAULT FALSE
 );
 
+-- HALLS
+CREATE TABLE halls (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  capacity INT DEFAULT NULL
+);
+
+-- GROUPS
+CREATE TABLE groups (
+  id SERIAL PRIMARY KEY,
+  teacher_id INT REFERENCES teachers(id) ON DELETE SET NULL,
+  hall_id INT REFERENCES halls(id) ON DELETE SET NULL,
+  start_time TIMESTAMPTZ NOT NULL,
+  duration INTERVAL DEFAULT INTERVAL '90 minutes',
+  is_additional BOOLEAN DEFAULT FALSE
+);
+
+-- GROUP_STUDENTS
+CREATE TABLE group_students (
+  group_id INT REFERENCES groups(id) ON DELETE CASCADE,
+  student_id INT REFERENCES students(id) ON DELETE CASCADE,
+  is_trial BOOLEAN DEFAULT FALSE,
+  PRIMARY KEY (group_id, student_id)
+);
+
+-- SCHEDULE_EXCEPTIONS
+CREATE TABLE schedule_exceptions (
+  id SERIAL PRIMARY KEY,
+  teacher_id INT REFERENCES teachers(id) ON DELETE CASCADE,
+  hall_id INT REFERENCES halls(id) ON DELETE SET NULL,
+  group_id INT REFERENCES groups(id) ON DELETE SET NULL,
+  exception_type TEXT CHECK (exception_type IN ('overlap', 'move', 'cancel')),
+  approved_by_admin BOOLEAN DEFAULT FALSE,
+  new_time TIMESTAMPTZ
+);
 
 ## 3. Environment Configuration
 Create a .env file in the root directory:

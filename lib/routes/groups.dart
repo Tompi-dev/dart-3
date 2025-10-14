@@ -3,7 +3,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import '../db/connection.dart';
 import 'package:postgres/postgres.dart' show Sql;
-import '../middleware/role_guard.dart'; 
+
 
 class GroupsRoute {
   Router get router {
@@ -11,19 +11,10 @@ class GroupsRoute {
 
     // ===== GET /groups =====
     router.get('/groups', (Request req) async {
-      final authHeader = req.headers['Authorization'];
-      if (authHeader == null || !authHeader.startsWith('Bearer ')) {
+        final user = req.context['user'] as Map?;
+      if (user == null) {
         return Response.forbidden(
-          jsonEncode({'error': 'Missing or invalid Authorization header'}),
-          headers: {'content-type': 'application/json'},
-        );
-      }
-
-      final token = authHeader.substring(7).trim();
-      final authData = verifyJwt(token);
-      if (authData == null) {
-        return Response.forbidden(
-          jsonEncode({'error': 'Invalid or expired token'}),
+          jsonEncode({'error': 'Unauthorized'}),
           headers: {'content-type': 'application/json'},
         );
       }
@@ -66,28 +57,11 @@ class GroupsRoute {
 
 
 // ===== POST /groups/<id>/join =====
-router.add('POST', '/groups/<id>/join', (Request req, String id) async {
+router.post('/groups/<id>/join', (Request req, String id) async {
   
-  final authHeader = req.headers['Authorization'];
-  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Missing or invalid Authorization header'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
+  final user = req.context['user'] as Map?;
 
-  final token = authHeader.substring(7).trim();
-  final authData = verifyJwt(token);
-  if (authData == null) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Invalid or expired token'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
-
-  
-  final role = authData['role'];
-  if (role != 'student') {
+  if (user == null || user['role'] != 'student') {
     return Response.forbidden(
       jsonEncode({'error': 'Access denied. Only students can join groups.'}),
       headers: {'content-type': 'application/json'},
@@ -213,26 +187,9 @@ router.add('POST', '/groups/<id>/join', (Request req, String id) async {
 // ===== POST /groups/<id>/join-trial =====
 router.add('POST', '/groups/<id>/join-trial', (Request req, String id) async {
 
-  final authHeader = req.headers['Authorization'];
-  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Missing or invalid Authorization header'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
-
-  final token = authHeader.substring(7).trim();
-  final authData = verifyJwt(token) as Map<String, dynamic>?;
-  if (authData == null) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Invalid or expired token'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
-
-
-  final role = authData['role'];
-  if (role != 'student') {
+ 
+  final user = req.context['user'] as Map?;
+      if (user == null || user['role'] != 'student'){
     return Response.forbidden(
       jsonEncode({'error': 'Access denied. Only students can join trials.'}),
       headers: {'content-type': 'application/json'},
@@ -338,26 +295,11 @@ router.add('POST', '/groups/<id>/join-trial', (Request req, String id) async {
 // ===== GET /group_students =====
 router.add('GET', '/group_students', (Request req) async {
 
-  final authHeader = req.headers['Authorization'];
-  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Missing or invalid Authorization header'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
-
-  final token = authHeader.substring(7).trim();
-  final authData = verifyJwt(token);
-  if (authData == null) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Invalid or expired token'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
+  
 
 
-  final role = authData['role'];
-  if (role != 'teacher' && role != 'admin') {
+   final user = req.context['user'] as Map?;
+      if (user == null || (user['role'] != 'teacher' && user['role'] != 'admin'))  {
     return Response.forbidden(
       jsonEncode({'error': 'Access denied. Teachers or Admins only.'}),
       headers: {'content-type': 'application/json'},

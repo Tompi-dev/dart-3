@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
-import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
+
 import 'package:postgres/postgres.dart'; 
 import '../db/connection.dart';
 import '../env.dart';
+import '../middleware/jwt_utils.dart';
 
 final jwtSecret = Env.get('JWT_SECRET');
 
@@ -87,19 +88,11 @@ class AuthRoute {
           );
         }
 
-        final userId = result.first[0];
-        final role = result.first[1];
+        final userId = result.first[0] as int;
+final role = result.first[1] as String;
 
        
-        final jwt = JWT({
-          'id': userId,
-          'role': role,
-          'exp': DateTime.now()
-              .add(const Duration(hours: 2))
-              .millisecondsSinceEpoch ~/ 1000,
-        });
-
-        final token = jwt.sign(SecretKey(jwtSecret!));
+        final token = generateJwt(userId, role);
 
         return Response.ok(
           jsonEncode({'token': token}),

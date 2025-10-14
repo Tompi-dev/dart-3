@@ -1,25 +1,37 @@
-
 import 'dart:convert';
-import 'package:jaguar_jwt/jaguar_jwt.dart';
-import '../env.dart';
-final _jwtSecret = Env.require("JWT_SECRET"); 
+import 'package:shelf/shelf.dart';
+import 'jwt_utils.dart'; // for verifyJwt()
 
 
-Map<String, dynamic>? verifyJwt(String token) {
-  try {
-  final decClaimSet = verifyJwtHS256Signature(token, _jwtSecret);
-  final payload = decClaimSet.toJson(); 
+Middleware roleGuard() {
+  return (Handler innerHandler) {
+    return (Request req) async {
+      // Skip auth for public routes like /auth/login or /auth/register
+      if (req.url.path.startsWith('auth')) {
+        return innerHandler(req);
+      }
 
-  final exp = payload['exp'];
-  
+      final authHeader = req.headers['Authorization'] ?? req.headers['authorization'];
+      if (authHeader == null || !authHeader.startsWith('Bearer ')) {
+        return Response.forbidden(
+          jsonEncode({'error': 'Missing or invalid Authorization header'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
 
-    
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    if (exp != null && exp < now) return null;
+      final token = authHeader.substring(7).trim();
+      final authData = verifyJwt(token);
 
-    return payload;
-  } catch (e) {
-    print('❌ JWT verification failed: $e');
-    return null;
-  }
+      if (authData == null) {
+        return Response.forbidden(
+          jsonEncode({'error': 'Invalid or expired token'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
+
+      // ✅ Attach decoded payload (id, role, etc.) to request context
+      final updatedRequest = req.change(context: {'user': authData});
+      return innerHandler(updatedRequest);
+    };
+  };
 }
