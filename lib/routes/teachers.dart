@@ -43,8 +43,8 @@ class TeachersHandler {
      
       final conflict = await connection.execute(Sql.named('''
         SELECT 1 FROM groups g
-        WHERE g.hall_id = @hall AND g.cancelled = FALSE AND
-              tstzrange(g.start_time, g.start_time + (g.duration_min || ' minutes')::interval) &&
+        WHERE g.hall_id = @hall  AND
+              tstzrange(g.start_time, g.start_time + g.duration) &&
               tstzrange(@st::timestamptz, @st::timestamptz + interval '90 minutes')
         LIMIT 1
       ''')

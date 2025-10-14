@@ -101,19 +101,20 @@ router.post('/groups/<id>/join', (Request req, String id) async {
       parameters: {'studentId': studentId, 'groupId': groupId},
     );
 
-    final studentExists = (check.first[0] ?? 0) as int;
-    final groupExists = (check.first[1] ?? 0) as int;
+    final studentExists = int.tryParse(check.first[0].toString()) ?? 0;
+    final groupExists   = int.tryParse(check.first[1].toString()) ?? 0;
 
-    if (studentExists == 0) {
+
+    if (studentExists == 0 ) {
       return Response(
-        404,
+        400,
         body: jsonEncode({'error': 'Student not found'}),
         headers: {'content-type': 'application/json'},
       );
     }
     if (groupExists == 0) {
       return Response(
-        404,
+        400,
         body: jsonEncode({'error': 'Group not found'}),
         headers: {'content-type': 'application/json'},
       );
@@ -184,8 +185,10 @@ router.post('/groups/<id>/join', (Request req, String id) async {
 });
 
 
+
+
 // ===== POST /groups/<id>/join-trial =====
-router.add('POST', '/groups/<id>/join-trial', (Request req, String id) async {
+router.post( '/groups/<id|[0-9]+>/join-trial', (Request req, String id) async {
 
  
   final user = req.context['user'] as Map?;
@@ -227,8 +230,9 @@ router.add('POST', '/groups/<id>/join-trial', (Request req, String id) async {
       parameters: {'studentId': studentId, 'groupId': groupId},
     );
 
-    final studentExists = (check.first[0] as int? ?? 0);
-    final groupExists = (check.first[1] as int? ?? 0);
+    final studentExists = int.tryParse(check.first[0].toString()) ?? 0;
+    final groupExists   = int.tryParse(check.first[1].toString()) ?? 0;
+
 
     if (studentExists == 0 || groupExists == 0) {
       return Response(
