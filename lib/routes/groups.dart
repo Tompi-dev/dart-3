@@ -30,7 +30,11 @@ class GroupsRoute {
 
       try {
         final result = await connection.execute('''
-          SELECT g.id, g.name, t.id AS teacher_id, h.name AS hall_name
+          SELECT g.id, 
+          t.id AS teacher_id, 
+          h.name AS hall_name, 
+          g.start_time,
+          g.is_additional
           FROM groups g
           LEFT JOIN teachers t ON g.teacher_id = t.id
           LEFT JOIN halls h ON g.hall_id = h.id;
@@ -39,9 +43,11 @@ class GroupsRoute {
         final groups = result
             .map((row) => {
                   'id': row[0],
-                  'name': row[1],
-                  'teacher_id': row[2],
-                  'hall_name': row[3],
+                  
+                  'teacher_id': row[1],
+                  'hall_name': row[2],
+                  'start_time': row[3]?.toString(),
+                  'is_additional': row[4],
                 })
             .toList();
 
@@ -56,124 +62,6 @@ class GroupsRoute {
     });
 
 
-  // ===== POST /groups =====
-router.post('/groups', (Request req) async {
-  final authHeader = req.headers['Authorization'];
-  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Missing or invalid Authorization header'}),
-      headers: {'content-type': 'application/json'},
-    );
-    
-  }
-
-  final token = authHeader.substring(7).trim();
-  final authData = verifyJwt(token);
-  if (authData == null) {
-    return Response.forbidden(
-      jsonEncode({'error': 'Invalid or expired token'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
-
- 
-  final role = authData['role'];
-  if (role != 'teacher' && role != 'admin') {
-    return Response.forbidden(
-      jsonEncode({'error': 'Access denied. Teachers or Admins only.'}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
-
-  try {
-    final body = await req.readAsString();
-    final data = jsonDecode(body) as Map<String, dynamic>;
-
-    final name = data['name'] as String?;
-    final teacherId = data['teacher_id'] as int?;
-    final hallId = data['hall_id'] as int?;
-    final startTime = DateTime.tryParse(data['start_time'] ?? '');
-    final endTime = DateTime.tryParse(data['end_time'] ?? '');
-
-    if (name == null ||
-        teacherId == null ||
-        hallId == null ||
-        startTime == null ||
-        endTime == null) {
-      return Response(
-        400,
-        body: jsonEncode({'error': 'Missing or invalid fields in request.'}),
-        headers: {'content-type': 'application/json'},
-      );
-    }
-
-    // 🧠 Проверка — нет ли группы с таким же именем
-    final existing = await connection.execute(
-      Sql.named('SELECT id FROM groups WHERE name = @name'),
-      parameters: {'name': name},
-    );
-    if (existing.isNotEmpty) {
-      return Response(
-        400,
-        body: jsonEncode({'error': 'Group with this name already exists'}),
-        headers: {'content-type': 'application/json'},
-      );
-    }
-
-    // 🕒 Проверка пересечения времени в зале
-    final overlap = await connection.execute(
-      Sql.named('''
-        SELECT COUNT(*) FROM groups
-        WHERE hall_id = @hallId
-          AND ((start_time, end_time) OVERLAPS (@startTime, @endTime))
-      '''),
-      parameters: {
-        'hallId': hallId,
-        'startTime': startTime,
-        'endTime': endTime,
-      },
-    );
-
-    final overlapCount = (overlap.first[0] ?? 0) as int;
-    if (overlapCount > 0) {
-      return Response(
-        400,
-        body: jsonEncode({
-          'error': 'Time conflict: another group already scheduled in this hall.'
-        }),
-        headers: {'content-type': 'application/json'},
-      );
-    }
-
-    // ✅ Добавление новой группы (id сгенерируется автоматически)
-    await connection.execute(
-      Sql.named('''
-        INSERT INTO groups (name, teacher_id, hall_id, start_time, end_time)
-        VALUES (@name, @teacherId, @hallId, @startTime, @endTime)
-      '''),
-      parameters: {
-        'name': name,
-        'teacherId': teacherId,
-        'hallId': hallId,
-        'startTime': startTime,
-        'endTime': endTime,
-      },
-    );
-
-    print('✅ Group added: $name');
-    return Response.ok(
-      jsonEncode({'message': 'Group added successfully'}),
-      headers: {'content-type': 'application/json'},
-    );
-  } catch (e, st) {
-    print('❌ Error adding group: $e');
-    print(st);
-    return Response.internalServerError(
-      body: jsonEncode({'error': e.toString()}),
-      headers: {'content-type': 'application/json'},
-    );
-  }
-});
 
 
 
@@ -210,6 +98,7 @@ router.add('POST', '/groups/<id>/join', (Request req, String id) async {
     final body = await req.readAsString();
     final data = jsonDecode(body) as Map<String, dynamic>;
     final studentId = data['student_id'] as int?;
+   
 
     if (studentId == null) {
       return Response(
@@ -282,7 +171,8 @@ router.add('POST', '/groups/<id>/join', (Request req, String id) async {
         JOIN groups g ON gs.group_id = g.id
         JOIN groups target ON target.id = @groupId
         WHERE gs.student_id = @studentId
-          AND (g.start_time, g.end_time) OVERLAPS (target.start_time, target.end_time)
+          AND ((g.start_time, g.start_time + INTERVAL '90 minutes')
+               OVERLAPS (target.start_time, target.start_time + INTERVAL '90 minutes'))
       '''),
       parameters: {'studentId': studentId, 'groupId': groupId},
     );
@@ -355,10 +245,18 @@ router.add('POST', '/groups/<id>/join-trial', (Request req, String id) async {
     final studentId = data['student_id'] as int?;
     final groupId = int.tryParse(id);
 
-    if (studentId == null || groupId == null) {
+    if (studentId == null ) {
       return Response(
         400,
-        body: jsonEncode({'error': 'Missing or invalid student_id/group_id'}),
+        body: jsonEncode({'error': 'Missing or invalid student_id'}),
+        headers: {'content-type': 'application/json'},
+      );
+    }
+
+    if ( groupId == null) {
+      return Response(
+        400,
+        body: jsonEncode({'error': 'Missing or invalid group_id'}),
         headers: {'content-type': 'application/json'},
       );
     }
@@ -405,7 +303,8 @@ router.add('POST', '/groups/<id>/join-trial', (Request req, String id) async {
         JOIN groups g ON gs.group_id = g.id
         JOIN groups target ON target.id = @groupId
         WHERE gs.student_id = @studentId
-          AND (g.start_time, g.end_time) OVERLAPS (target.start_time, target.end_time)
+          AND ((g.start_time, g.start_time + INTERVAL '90 minutes')
+ OVERLAPS (target.start_time, target.start_time + INTERVAL '90 minutes'))
       '''),
       parameters: {'studentId': studentId, 'groupId': groupId},
     );
