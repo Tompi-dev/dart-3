@@ -1,27 +1,21 @@
-
-
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'db/connection.dart';
 import 'routes/auth.dart';
-import 'routes/groups.dart';
+import 'routes/students.dart';
 import 'routes/teachers.dart';
 
 import 'middleware/role_guard.dart';
 
-
 Future<void> main() async {
   await connectToDatabase();
   
-
-
   final router = Cascade()
       .add(AuthRoute().router)
-      .add(GroupsRoute().router)
+      .add(StudentsHandler().router)
       .add(TeachersHandler().router)
       .handler;
 
- 
   final handler = Pipeline()
       .addMiddleware(logRequests())
       .addMiddleware(roleGuard())
