@@ -103,6 +103,17 @@ CREATE TABLE schedule_exceptions (
   new_time TIMESTAMPTZ
 );
 
+ALTER TABLE users               ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE teachers            ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
+ALTER TABLE students            ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
+ALTER TABLE halls               ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
+ALTER TABLE groups              ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
+ALTER TABLE group_students      ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
+ALTER TABLE schedule_exceptions ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
+
+ALTER TABLE groups ADD COLUMN cancelled BOOLEAN DEFAULT FALSE;
+
+
 ## 3. Environment Configuration
 Create a .env file in the root directory:
 

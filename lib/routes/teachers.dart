@@ -179,6 +179,18 @@ class TeachersHandler {
       }
 
       final groupId = int.parse(id);
+       final g = await connection.execute(
+        Sql.named(
+          'SELECT hall_id FROM groups WHERE id = @gid AND teacher_id = @tid',
+        ),
+        parameters: {'gid': groupId, 'tid': user['id']},
+      );
+      if (g.isEmpty) {
+        return Response.notFound(
+          jsonEncode({'error': 'Group not found or not owned by teacher'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
 
       // тут заяка админга жберелед
       await connection.execute(
