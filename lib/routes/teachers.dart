@@ -31,17 +31,16 @@ class TeachersHandler {
       final hallId = data['hall_id'] as int;
       final startTime = data['start_time'] as String; // ISO string
       final isAdditional = (data['is_additional'] ?? false) == true;
-
+      final name = data['name'] as String?;
+      
       final hallCheck = await connection.execute(
         Sql.named('''
-        SELECT
-          (SELECT COUNT(*) FROM halls WHERE id = @hallId),
-          
-      '''),
+    SELECT COUNT(*) FROM halls WHERE id = @hallId
+  '''),
         parameters: {'hallId': hallId},
       );
-      
-      final existsHall  = int.tryParse(hallCheck.first[1].toString()) ?? 0;
+
+      final existsHall = int.tryParse(hallCheck.first[0].toString()) ?? 0;
       if (existsHall == 0) {
         return Response(
           400,
@@ -77,14 +76,15 @@ class TeachersHandler {
 
       final res = await connection.execute(
         Sql.named('''
-        INSERT INTO groups (teacher_id, hall_id, start_time, is_additional)
-        VALUES (@tid, @hall, @st::timestamptz, @add) RETURNING id
+        INSERT INTO groups (teacher_id, hall_id, start_time, is_additional, name)
+        VALUES (@tid, @hall, @st::timestamptz, @add, @name) RETURNING id
       '''),
         parameters: {
           'tid': user['id'],
           'hall': hallId,
           'st': startTime,
           'add': isAdditional,
+          'name': name ?? 'Untitled Group',
         },
       );
 
