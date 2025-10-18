@@ -76,8 +76,8 @@ class TeachersHandler {
 
       final res = await connection.execute(
         Sql.named('''
-        INSERT INTO groups (teacher_id, hall_id, start_time, is_additional, name)
-        VALUES (@tid, @hall, @st::timestamptz, @add, @name) RETURNING id
+        INSERT INTO groups (teacher_id, hall_id, start_time, is_additional, name, created_by, created_at, )
+        VALUES (@tid, @hall, @st::timestamptz, @add, @name, @tid, NOW()) RETURNING id
       '''),
         parameters: {
           'tid': user['id'],
@@ -85,6 +85,7 @@ class TeachersHandler {
           'st': startTime,
           'add': isAdditional,
           'name': name ?? 'Untitled Group',
+          
         },
       );
 
@@ -130,7 +131,7 @@ class TeachersHandler {
       SELECT COUNT(*) FROM groups
       WHERE hall_id = @hall
         AND cancelled = FALSE
-        AND ((start_time, end_time) OVERLAPS (@st, @et))
+        AND ((start_time, start_time + INTERVAL '90 minutes') OVERLAPS (@st, @et))
     '''),
         parameters: {
           'hall': hallId,
@@ -150,8 +151,8 @@ class TeachersHandler {
 
       await connection.execute(
         Sql.named('''
-      INSERT INTO groups (teacher_id, hall_id, start_time, end_time, is_additional)
-      VALUES (@tid, @hall, @st, @et, TRUE)
+      INSERT INTO groups (teacher_id, hall_id, start_time, end_time, is_additional, created_at, created_by)
+      VALUES (@tid, @hall, @st, @et, TRUE, @tid, NOW())
     '''),
         parameters: {
           'tid': user['id'],
