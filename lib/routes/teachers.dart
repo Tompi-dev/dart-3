@@ -76,7 +76,7 @@ class TeachersHandler {
 
       final res = await connection.execute(
         Sql.named('''
-        INSERT INTO groups (teacher_id, hall_id, start_time, is_additional, name, created_by, created_at, )
+        INSERT INTO groups (teacher_id, hall_id, start_time, is_additional, name, created_by, created_at)
         VALUES (@tid, @hall, @st::timestamptz, @add, @name, @tid, NOW()) RETURNING id
       '''),
         parameters: {
@@ -111,20 +111,35 @@ class TeachersHandler {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final newStart = data['start_time'] as String; // ISO-8601 string
 
-      final g = await connection.execute(
-        Sql.named(
-          'SELECT hall_id FROM groups WHERE id = @gid AND teacher_id = @tid',
-        ),
-        parameters: {'gid': groupId, 'tid': user['id']},
-      );
-      if (g.isEmpty) {
-        return Response.notFound(
-          jsonEncode({'error': 'Group not found or not owned by teacher'}),
-          headers: {'content-type': 'application/json'},
-        );
-      }
 
-      final hallId = g.first[0] as int;
+      
+
+      final groupExists = await connection.execute(
+  Sql.named('SELECT teacher_id, hall_id FROM groups WHERE id = @gid'),
+  parameters: {'gid': groupId},
+);
+
+if (groupExists.isEmpty) {
+  return Response(
+    404,
+    body: jsonEncode({'error': 'There is no such group'}),
+    headers: {'content-type': 'application/json'},
+  );
+}
+
+final groupTeacherId = groupExists.first[0] as int;
+final hallId = groupExists.first[1] as int;
+
+
+if (groupTeacherId != user['id']) {
+  return Response.forbidden(
+    jsonEncode({'error': 'You can only modify your own groups'}),
+    headers: {'content-type': 'application/json'},
+  );
+}
+
+
+     
 
       final overlap = await connection.execute(
         Sql.named('''
@@ -151,14 +166,15 @@ class TeachersHandler {
 
       await connection.execute(
         Sql.named('''
-      INSERT INTO groups (teacher_id, hall_id, start_time, end_time, is_additional, created_at, created_by)
-      VALUES (@tid, @hall, @st, @et, TRUE, @tid, NOW())
+      INSERT INTO groups (teacher_id, hall_id, start_time, duration, is_additional,  created_by, created_at)
+      VALUES (@tid, @hall, @st, INTERVAL '90 minutes', TRUE, @tid, NOW())
     '''),
         parameters: {
           'tid': user['id'],
           'hall': hallId,
+          
           'st': DateTime.parse(newStart),
-          'et': DateTime.parse(newStart).add(const Duration(minutes: 90)),
+          
         },
       );
 
