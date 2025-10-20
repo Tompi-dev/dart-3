@@ -243,6 +243,20 @@ if (groupTeacherId != user['id']) {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final newTime = data['new_time'] as String;
 
+       
+       final g = await connection.execute(
+        Sql.named(
+          'SELECT hall_id FROM groups WHERE id = @gid AND teacher_id = @tid',
+        ),
+        parameters: {'gid': groupId, 'tid': user['id']},
+      );
+      if (g.isEmpty) {
+        return Response.notFound(
+          jsonEncode({'error': 'Group not found or not owned by teacher'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
+
       // Exception request (admin approval flow)
       await connection.execute(
         Sql.named('''
