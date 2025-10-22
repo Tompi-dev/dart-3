@@ -26,13 +26,25 @@ class TeachersHandler {
         );
       }
 
+      final freezeCheck = await connection.execute(
+        Sql.named('SELECT is_frozen FROM teachers WHERE id=@tid'),
+        parameters: {'tid': user['id']},
+      );
+
+      if (freezeCheck.isNotEmpty && freezeCheck.first[0] == true) {
+        return Response.forbidden(
+          jsonEncode({'error': 'Schedule frozen by admin'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
+
       final body = await req.readAsString();
       final data = jsonDecode(body) as Map<String, dynamic>;
       final hallId = data['hall_id'] as int;
       final startTime = data['start_time'] as String; // ISO string
       final isAdditional = (data['is_additional'] ?? false) == true;
       final name = data['name'] as String?;
-      
+
       final hallCheck = await connection.execute(
         Sql.named('''
     SELECT COUNT(*) FROM halls WHERE id = @hallId
@@ -85,7 +97,6 @@ class TeachersHandler {
           'st': startTime,
           'add': isAdditional,
           'name': name ?? 'Untitled Group',
-          
         },
       );
 
@@ -111,35 +122,40 @@ class TeachersHandler {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final newStart = data['start_time'] as String; // ISO-8601 string
 
+      final freezeCheck = await connection.execute(
+        Sql.named('SELECT is_frozen FROM teachers WHERE id=@tid'),
+        parameters: {'tid': user['id']},
+      );
 
-      
+      if (freezeCheck.isNotEmpty && freezeCheck.first[0] == true) {
+        return Response.forbidden(
+          jsonEncode({'error': 'Schedule frozen by admin'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
 
       final groupExists = await connection.execute(
-  Sql.named('SELECT teacher_id, hall_id FROM groups WHERE id = @gid'),
-  parameters: {'gid': groupId},
-);
+        Sql.named('SELECT teacher_id, hall_id FROM groups WHERE id = @gid'),
+        parameters: {'gid': groupId},
+      );
 
-if (groupExists.isEmpty) {
-  return Response(
-    404,
-    body: jsonEncode({'error': 'There is no such group'}),
-    headers: {'content-type': 'application/json'},
-  );
-}
+      if (groupExists.isEmpty) {
+        return Response(
+          404,
+          body: jsonEncode({'error': 'There is no such group'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
 
-final groupTeacherId = groupExists.first[0] as int;
-final hallId = groupExists.first[1] as int;
+      final groupTeacherId = groupExists.first[0] as int;
+      final hallId = groupExists.first[1] as int;
 
-
-if (groupTeacherId != user['id']) {
-  return Response.forbidden(
-    jsonEncode({'error': 'You can only modify your own groups'}),
-    headers: {'content-type': 'application/json'},
-  );
-}
-
-
-     
+      if (groupTeacherId != user['id']) {
+        return Response.forbidden(
+          jsonEncode({'error': 'You can only modify your own groups'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
 
       final overlap = await connection.execute(
         Sql.named('''
@@ -172,9 +188,8 @@ if (groupTeacherId != user['id']) {
         parameters: {
           'tid': user['id'],
           'hall': hallId,
-          
+
           'st': DateTime.parse(newStart),
-          
         },
       );
 
@@ -194,8 +209,19 @@ if (groupTeacherId != user['id']) {
         );
       }
 
+      final freezeCheck = await connection.execute(
+        Sql.named('SELECT is_frozen FROM teachers WHERE id=@tid'),
+        parameters: {'tid': user['id']},
+      );
+
+      if (freezeCheck.isNotEmpty && freezeCheck.first[0] == true) {
+        return Response.forbidden(
+          jsonEncode({'error': 'Schedule frozen by admin'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
       final groupId = int.parse(id);
-       final g = await connection.execute(
+      final g = await connection.execute(
         Sql.named(
           'SELECT hall_id FROM groups WHERE id = @gid AND teacher_id = @tid',
         ),
@@ -243,8 +269,19 @@ if (groupTeacherId != user['id']) {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final newTime = data['new_time'] as String;
 
-       
-       final g = await connection.execute(
+      final freezeCheck = await connection.execute(
+        Sql.named('SELECT is_frozen FROM teachers WHERE id=@tid'),
+        parameters: {'tid': user['id']},
+      );
+
+      if (freezeCheck.isNotEmpty && freezeCheck.first[0] == true) {
+        return Response.forbidden(
+          jsonEncode({'error': 'Schedule frozen by admin'}),
+          headers: {'content-type': 'application/json'},
+        );
+      }
+
+      final g = await connection.execute(
         Sql.named(
           'SELECT hall_id FROM groups WHERE id = @gid AND teacher_id = @tid',
         ),

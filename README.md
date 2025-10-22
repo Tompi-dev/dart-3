@@ -103,6 +103,13 @@ CREATE TABLE schedule_exceptions (
   new_time TIMESTAMPTZ
 );
 
+CREATE TABLE logs (
+  id SERIAL PRIMARY KEY,
+  action TEXT NOT NULL,
+  details JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE users               ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE teachers            ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
 ALTER TABLE students            ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
@@ -112,6 +119,13 @@ ALTER TABLE group_students      ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(),
 ALTER TABLE schedule_exceptions ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN created_by INT REFERENCES users(id);
 
 ALTER TABLE groups ADD COLUMN cancelled BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE teachers
+ADD COLUMN is_frozen BOOLEAN DEFAULT FALSE;
+
+
+
+
 
 
 ## 3. Environment Configuration

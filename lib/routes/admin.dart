@@ -210,7 +210,7 @@ class AdminHandler {
 
         await connection.execute(
           Sql.named('''
-            INSERT INTO users (id, email, full_name, password_hash, role)
+            INSERT INTO users (id, email, name, password, role)
             SELECT @id, ('student_' || @id::text || '@local'),
                    ('Student ' || @id::text), '', 'student'
             WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = @id)
