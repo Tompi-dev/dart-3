@@ -132,3 +132,56 @@ dart run lib/server.dart
 
 
 ✅ Server running on http://localhost:8080
+
+
+Max Planck Institute for Informatics (Saarbruecken)
+has Departments
+D1
+Algorithms and Complexity
+Prof. Danupon Nanongkai, Ph.D.
+D2
+Computer Vision and Machine Learning
+Prof. Dr. Bernt Schiele
+D3
+Internet Architecture
+Prof. Anja Feldmann, Ph.D.
+D4
+Computer Graphics
+Prof. Dr. Hans-Peter Seidel
+D5
+Databases and Information Systems
+Prof. Dr. Gerhard Weikum
+D6
+Visual Computing and Artificial Intelligence
+Prof. Dr. Christian Theobalt
+RG1
+Automation of Logic
+Prof. Dr. Christoph Weidenbach
+RG2
+Network and Cloud Systems
+Dr. Yiting Xia
+RG3
+Multimodal Language Processing
+Prof. Dr. Vera Demberg
+
+ 
+Max Planck Institute for Software Systems (Kaiserslautern and Saarbruecken)
+hasResearch areas
+
+Algorithms, Theory & Logic
+
+Computer Systems
+
+Cyber-Physical Systems
+
+Programming Languages & Verification
+
+Social & Information Systems
+
+More CS @ Max Planck
+
+ 
+Max Planck Institute for Security and Privacy (Bochum)
+
+which i should apply if:
+

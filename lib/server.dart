@@ -4,7 +4,7 @@ import 'db/connection.dart';
 import 'routes/auth.dart';
 import 'routes/students.dart';
 import 'routes/teachers.dart';
-
+import 'routes/admin.dart';
 import 'middleware/role_guard.dart';
 
 Future<void> main() async {
@@ -14,6 +14,7 @@ Future<void> main() async {
       .add(AuthRoute().router)
       .add(StudentsHandler().router)
       .add(TeachersHandler().router)
+      .add(AdminHandler().router)
       .handler;
 
   final handler = Pipeline()
