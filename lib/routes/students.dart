@@ -226,10 +226,17 @@ class StudentsHandler {
         final studentExists = int.tryParse(check.first[0].toString()) ?? 0;
         final groupExists = int.tryParse(check.first[1].toString()) ?? 0;
 
-        if (studentExists == 0 || groupExists == 0) {
+        if (studentExists == 0) {
           return Response(
-            404,
-            body: jsonEncode({'error': 'Student or Group not found'}),
+            400,
+            body: jsonEncode({'error': 'Student not found'}),
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (groupExists == 0) {
+          return Response(
+            400,
+            body: jsonEncode({'error': 'Group not found'}),
             headers: {'content-type': 'application/json'},
           );
         }
