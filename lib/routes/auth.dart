@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
-
-import 'package:postgres/postgres.dart'; 
+import 'package:postgres/postgres.dart';
 import '../db/connection.dart';
 import '../env.dart';
 import '../middleware/jwt_utils.dart';
@@ -32,10 +31,11 @@ class AuthRoute {
           );
         }
 
-        await connection.execute(
+        final inserted = await connection.execute(
           Sql.named('''
             INSERT INTO users (name, email, password, role)
             VALUES (@name, @email, @password, @role)
+            RETURNING id
           '''),
           parameters: {
             'name': name,
@@ -45,6 +45,28 @@ class AuthRoute {
           },
         );
 
+        final newUserId = inserted.first[0] as int;
+
+        if (role == 'student') {
+          await connection.execute(
+            Sql.named('''
+              INSERT INTO students (id, is_trial)
+              VALUES (@id, FALSE)
+              ON CONFLICT (id) DO NOTHING
+            '''),
+            parameters: {'id': newUserId},
+          );
+        } else if (role == 'teacher') {
+          await connection.execute(
+            Sql.named('''
+              INSERT INTO teachers (id, is_frozen)
+              VALUES (@id, FALSE)
+              ON CONFLICT (id) DO NOTHING
+            '''),
+            parameters: {'id': newUserId},
+          );
+        }
+
         print('✅ Registered new user: $email ($role)');
         return Response.ok(
           jsonEncode({'message': 'User registered successfully'}),
@@ -52,8 +74,22 @@ class AuthRoute {
         );
       } catch (e) {
         print('❌ Error register: $e');
+
+        final errString = e.toString();
+        if (errString.contains('duplicate key value') ||
+            errString.contains('23505')) {
+          return Response(
+            400,
+            body: jsonEncode({
+              'error': 'Email already exists. Please use a different one.'
+            }),
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
         return Response.internalServerError(
-          body: jsonEncode({'error': e.toString()}),
+          body: jsonEncode({'error': errString}),
+          headers: {'content-type': 'application/json'},
         );
       }
     });
@@ -89,9 +125,8 @@ class AuthRoute {
         }
 
         final userId = result.first[0] as int;
-final role = result.first[1] as String;
+        final role = result.first[1] as String;
 
-       
         final token = generateJwt(userId, role);
 
         return Response.ok(
@@ -102,6 +137,7 @@ final role = result.first[1] as String;
         print('❌ Error login: $e');
         return Response.internalServerError(
           body: jsonEncode({'error': e.toString()}),
+          headers: {'content-type': 'application/json'},
         );
       }
     });
